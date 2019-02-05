@@ -44,8 +44,33 @@ wr_te <- indData %>%                                 # create dataset for WRs an
               rec_tds_z_sumZ + rec_fumbles_z_sumZ) %>% # create total z score index
   arrange(desc(totalZ))                              # arrange with greatest valuea at top
 
+rbCareer <- rb %>%                                   # specify rb dataset
+  ungroup() %>%                                      # remove previous groupings
+  group_by(name) %>%                                 # group by name
+  summarise(careerZ = sum(totalZ, na.rm = TRUE)) %>% # sum all zscores by person
+  arrange(desc(careerZ))                             # arrange in a descending order
+  
+qbCareer <- qb %>%                                   # specify qb data
+  ungroup() %>%                                      # remove previous groupings
+  group_by(name) %>%                                 # group by name
+  summarise(careerZ = sum(totalZ, na.rm = TRUE)) %>% # sum all zscores by person
+  arrange(desc(careerZ))                             # arrange in a descending order
+
+wr_teCareer <- wr_te %>%                             # specify wr_te data
+  ungroup() %>%                                      # remove previous groupings
+  group_by(name) %>%                                 # group by name
+  summarise(careerZ = sum(totalZ, na.rm = TRUE)) %>% # sum all zscores by person
+  arrange(desc(careerZ))                             # arrange in a descending order
+
 rb                                                   # print rb
+
+rbCareer                                             # print rb career data
 
 qb                                                   # print qb
 
+qbCareer                                             # print qb career data
+
 wr_te                                                # print wr_te
+
+wr_teCareer                                          # print wr_te career data
+
