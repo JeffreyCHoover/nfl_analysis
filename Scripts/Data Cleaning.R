@@ -1,11 +1,15 @@
-##Create better template for checking and auto installing all needed packages
-
-# load necessary packages
-library(tidyverse)
-library(dplyr)
-library(ggplot2)
-library(readr)
-library(stringr)
+# specify which packages are needed
+needed_packages <- c("tidyverse", "dplyr", "ggplot2", "readr", "stringr",
+                     "hrbrthemes", "colorblindr")
+# attempt to load packages
+load_packages <- function(x) {
+  # if packages aren't already installed, install them
+  if (!(x %in% installed.packages())) {
+    install.packages(x)
+  }
+  suppressPackageStartupMessages(require(x, character.only = TRUE))
+}
+vapply(needed_packages, load_packages, logical(1))
 
 #load data in better
 data <- read_csv("data/nfl_2010-2017.csv") %>%
