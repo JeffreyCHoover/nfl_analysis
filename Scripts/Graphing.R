@@ -1,8 +1,25 @@
 # graph individuals' season data
-rbIndSeasonGraph <- rb %>%
-  group_by(name) %>%
-  geom_jitter(mapping = aes(y = totalZ), stat = "identity", position = "jitter",
-              na.rm = TRUE, show.legend = TRUE, alpha = 1/3)
+rb %>%
+  #group_by(name) %>%
+  ggplot(aes(x = game_year, y = totalZ)) + 
+  geom_jitter(show.legend = TRUE, alpha = 5/9, color = "green") + 
+  theme(panel.background = element_rect(fill = 'black', colour = 'black'),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+qb %>%
+  ggplot(aes(x = game_year, y = totalZ)) + 
+  geom_jitter(show.legend = TRUE, alpha = 5/9, color = "green") + 
+  theme(panel.background = element_rect(fill = 'black', colour = 'black'),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+wr_te %>%
+  ggplot(aes(x = game_year, y = totalZ)) + 
+  geom_jitter(show.legend = TRUE, alpha = 5/9, color = "green") + 
+  theme(panel.background = element_rect(fill = 'black', colour = 'black'),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
 # graph individuals' career data
 indCareerGraph <- indData %>%
