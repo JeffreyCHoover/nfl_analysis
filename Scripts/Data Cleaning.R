@@ -1,6 +1,6 @@
 # specify which packages are needed
 needed_packages <- c("tidyverse", "dplyr", "ggplot2", "readr", "stringr",
-                     "hrbrthemes", "colorblindr")
+                     "hrbrthemes", "colorblindr", "cowplot")
 # attempt to load packages
 load_packages <- function(x) {
   # if packages aren't already installed, install them
