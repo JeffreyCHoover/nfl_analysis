@@ -1,8 +1,8 @@
 # graph individuals' season data
 rb %>%
   #group_by(name) %>%
-  ggplot(aes(x = game_year, y = totalZ, color = name)) + 
-  geom_jitter(show.legend = TRUE, alpha = 5/9)+ #, color = "green") + 
+  ggplot(aes(x = game_year, y = totalZ)) + 
+  geom_jitter(show.legend = TRUE, alpha = 5/9), color = "green") + 
   theme(panel.background = element_rect(fill = 'black', colour = 'black'),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
