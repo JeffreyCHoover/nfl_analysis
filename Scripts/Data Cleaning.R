@@ -12,18 +12,21 @@ load_packages <- function(x) {
 vapply(needed_packages, load_packages, logical(1))
 
 #load data in better
-data <- read_csv("data/nfl_2010-2017.csv") %>%
+data <- read_csv("data/nfl_2010-2017.csv") %>%                 # load data
   select(-X1)
+
+data$team <- str_replace_all(data$team, c("JAC" = "JAX", "STL" = "LA", 
+                                          "SD" = "LAC"))       # change team names if teams have moved
 
 #condense individual data into yearly stats
 indData <- data %>%
-  select(-game_week) %>%   # remove irrelevant vars
-  group_by(name, game_year, team) %>%              # group by player and year 
+  select(-game_week) %>%                                       # remove irrelevant vars
+  group_by(name, game_year, team) %>%                          # group by player and year 
   summarise_at(.vars = vars(-name, -team, -game_year, -position), 
-               .funs = funs(sum), na.rm = TRUE) %>% # sum all statistics and remove NAs
-  ungroup()                                  # ungroup
+               .funs = funs(sum), na.rm = TRUE) %>%            # sum all statistics and remove NAs
+  ungroup()                                                    # ungroup
 
-#add position variable back into individual data
+#add team variable back into individual data
 indData <- data %>%
   select(name, position, team) %>%
   left_join(indData, by = c("name", "team"))
