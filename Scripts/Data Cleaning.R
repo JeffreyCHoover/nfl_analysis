@@ -17,15 +17,16 @@ data <- read_csv("data/nfl_2010-2017.csv") %>%
 
 #condense individual data into yearly stats
 indData <- data %>%
-  select(-position, -team, -game_week) %>%   # remove irrelevant vars
-  group_by(name, game_year) %>%              # group by player and year 
-  summarise_all(funs(sum), na.rm = TRUE) %>% # sum all statistics and remove NAs
+  select(-game_week) %>%   # remove irrelevant vars
+  group_by(name, game_year, team) %>%              # group by player and year 
+  summarise_at(.vars = vars(-name, -team, -game_year, -position), 
+               .funs = funs(sum), na.rm = TRUE) %>% # sum all statistics and remove NAs
   ungroup()                                  # ungroup
 
 #add position variable back into individual data
 indData <- data %>%
-  select(name, position) %>%
-  left_join(indData, by = "name")
+  select(name, position, team) %>%
+  left_join(indData, by = c("name", "team"))
 
 #condense team data into yearly stats
 teamData <- data %>%

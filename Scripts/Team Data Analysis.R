@@ -1,5 +1,5 @@
 teamData <- teamData %>%                             # modify current data
-  group_by(game_year) %>%                      # group by player and year
+  group_by(game_year) %>%                            # group by player and year
   mutate_at(vars(-team, -game_year),                 # unselect character vars
                                                      # and year var
             funs(z = ((. - mean(., na.rm = TRUE)) / sd(., na.rm = TRUE)))) %>%   # create z-score for all 
