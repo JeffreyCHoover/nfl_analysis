@@ -1,1 +1,5 @@
 # nfl_analysis
+
+This project is a reproducible R project that is analyzing data collected from the National Football League (NFL) between the 2000 and 2017 seasons. Traditionally, most statistics in sports are compared based on the raw totals (e.g., comparing the number of career passing yards between players). The unfortunate downfall of such an approach is that the trends in the league differ, and as a result, players’ raw statistical totals may reflect those trends. For example, players who played in the early decades of the NFL were playing in a rushing dominant context, whereas players now are playing in a passing dominant context.
+
+This statistical analysis will attempt to serve as a basis for comparing players’ statistical totals regardless of when each player played. This will be done by calculating z-scores based on the yearly statistics for all statistical categories. Subsequently, yearly totals can be calculated by summing all of the variables for each year. Then, yearly totals can be compared across years, and yearly totals can be summed to calculate career totals based off of those z-scores.
