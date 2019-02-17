@@ -9,6 +9,7 @@ indData <- indData %>%                               # modify current data
   ungroup() %>%                                      # ungroup
   select(name, position, game_year, contains("z"))   # restrict vars to zscores
 
+
 rb <- indData %>%                                    # create dataset for RBs
   select(name, game_year, position, contains("rush")) %>% # select rushing vars
   filter(position == "RB") %>%                       # filter to RB position

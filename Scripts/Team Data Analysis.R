@@ -14,7 +14,7 @@ teamData <- teamData %>%                             # modify current data
          int_z_sumZ = int_z_sumZ * -1,
          sck_z_sumZ = sck_z_sumZ * -1,
          pass_fumbles_z_sumZ = pass_fumbles_z_sumZ * -1) %>% # reverse score fumbles, sacks, and ints
-  summarise(totalZ = rush_att_z_sumZ + rush_yds_z_sumZ + rush_avg_z_sumZ + 
+  mutate(totalZ = rush_att_z_sumZ + rush_yds_z_sumZ + rush_avg_z_sumZ + 
               rush_tds_z_sumZ + 
               ifelse(is.na(rush_fumbles_z_sumZ), 0, rush_fumbles_z_sumZ) + 
               rec_z_sumZ + 
@@ -22,6 +22,7 @@ teamData <- teamData %>%                             # modify current data
               rec_fumbles_z_sumZ + pass_att_z_sumZ + pass_yds_z_sumZ + 
               pass_tds_z_sumZ + int_z_sumZ + sck_z_sumZ + 
               pass_fumbles_z_sumZ) %>%               # create total z score index
+  select(team, game_year, totalZ) %>%
   arrange(desc(totalZ))                              # sort in descending order
 
 teamDataWindow <- teamData %>%                       # store teamData in teamDataWindow

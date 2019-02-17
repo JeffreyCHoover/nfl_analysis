@@ -8,6 +8,8 @@ rb %>%
   ggtitle("RB Performance by Season") +                                      # set graph title
   labs(x = "Year", y = "Total Z Score")                                      # set axes labels
 
+rb                                                                           # graph rb data
+
 qb %>%
   ggplot(aes(x = game_year, y = totalZ)) +                                   # set vars for axis
   geom_jitter(alpha = 5/9, color = "green") +                                # set alpha and color
@@ -16,6 +18,8 @@ qb %>%
         panel.grid.minor = element_blank()) +                                # remove minor grid lines
   ggtitle("QB Performance by Season") +                                      # set graph title
   labs(x = "Year", y = "Total Z Score")                                      # set axes labels
+
+qb                                                                           # graph qb data
 
 wr_te %>%
   ggplot(aes(x = game_year, y = totalZ)) +                                   # set vars for axis
@@ -26,6 +30,8 @@ wr_te %>%
   ggtitle("WR/TE Performance by Season") +                                   # set graph title
   labs(x = "Year", y = "Total Z Score")                                      # set axes labels
 
+wr_te                                                                        # graph wr_te data
+
 # graph team data
 teamData %>%
   ggplot(aes(x = game_year, y = totalZ, color = team)) +                     # set vars for axis
@@ -35,3 +41,5 @@ teamData %>%
         panel.grid.minor = element_blank()) +                                # remove minor grid lines
   ggtitle("Team Performance by Season") +                                    # set graph title
   labs(x = "Year", y = "Total Z Score")                                      # set axes labels
+
+teamData                                                                     # graph team data
