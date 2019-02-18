@@ -13,7 +13,7 @@ library(stringr)
 library(hrbrthemes)
 library(colorblindr)
 library(cowplot)
-library(tinytex)
+library(kableExtra)
 
 setwd("~/Dropbox/Funding applications/RStudio Internship/nfl_analysis")
 
@@ -183,7 +183,8 @@ rb %>%
   ggtitle("RB Performance by Season") +                                      # set graph title
   labs(x = "Year", y = "Total Z Score")                                      # set axes labels
 
-rb                                                                           # graph rb data
+kable(head(rb, 30), booktabs = TRUE, 
+        caption = 'A table of the top 30 running back performances by season.')
 
 qb %>%
   ggplot(aes(x = game_year, y = totalZ)) +                                   # set vars for axis
@@ -194,7 +195,8 @@ qb %>%
   ggtitle("QB Performance by Season") +                                      # set graph title
   labs(x = "Year", y = "Total Z Score")                                      # set axes labels
 
-qb                                                                           # graph qb data
+kable(head(qb, 30), booktabs = TRUE, 
+        caption = 'A table of the top 30 quarter back performances by season.')
 
 wr_te %>%
   ggplot(aes(x = game_year, y = totalZ)) +                                   # set vars for axis
@@ -205,7 +207,8 @@ wr_te %>%
   ggtitle("WR/TE Performance by Season") +                                   # set graph title
   labs(x = "Year", y = "Total Z Score")                                      # set axes labels
 
-wr_te                                                                        # graph wr_te data
+kable(head(wr_te, 30), booktabs = TRUE, 
+        caption = 'A table of the top 30 receiving performances by season.')
 
 # graph team data
 teamData %>%
@@ -217,5 +220,6 @@ teamData %>%
   ggtitle("Team Performance by Season") +                                    # set graph title
   labs(x = "Year", y = "Total Z Score")                                      # set axes labels
 
-teamData                                                                     # graph team data
+kable(head(teamData, 30), booktabs = TRUE, 
+        caption = 'A table of the top 30 team performances by season.')
 ```
