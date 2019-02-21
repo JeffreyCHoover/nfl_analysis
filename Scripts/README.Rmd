@@ -10,16 +10,321 @@ knitr::opts_chunk$set(
   comment = "#>",
   fig.path = "README/README-fig-",
   out.width = "50%",
-  fig.align = "center"
+  fig.align = "center",
+  table.format = "latex",
+  results = "asis",
+  digits = 4
 )
 ```
 
-# GitHub README
-This project is a reproducible R project that is analyzing data collected from the National Football League (NFL) between the 2000 and 2017 seasons. Traditionally, most statistics in sports are compared based on the raw totals (e.g., comparing the number of career passing yards between players). The unfortunate downfall of such an approach is that the trends in the league differ, and as a result, players’ raw statistical totals may reflect those trends. For example, players who played in the early decades of the NFL were playing in a rushing dominant context, whereas players now are playing in a passing dominant context.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
 
-This statistical analysis will attempt to serve as a basis for comparing players’ statistical totals regardless of when each player played. This will be done by calculating z-scores based on the yearly statistics for all statistical categories. Subsequently, yearly totals can be calculated by summing all of the variables for each year. Then, yearly totals can be compared across years, and yearly totals can be summed to calculate career totals based off of those z-scores.
+# call needed  packages 
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(stringr)
+library(hrbrthemes)
+library(colorblindr)
+library(cowplot)
+library(kableExtra)
+library(tinytex)
+
+setwd("~/Dropbox/Funding applications/RStudio Internship/nfl_analysis")
+
+#load data in better
+data <- read_csv("data/nfl_2010-2017.csv") %>%                 # load data
+  select(-X1)
+
+data$team <- str_replace_all(data$team, c("JAC" = "JAX", "STL" = "LA", 
+                                          "SD" = "LAC"))       # change team names if teams have moved
+
+#condense individual data into yearly stats
+indData <- data %>%
+  select(-game_week) %>%                                       # remove irrelevant vars
+  group_by(name, game_year, team) %>%                          # group by player and year 
+  summarise_at(.vars = vars(-name, -team, -game_year, -position), 
+               .funs = funs(sum), na.rm = TRUE) %>%            # sum all statistics and remove NAs
+  ungroup()                                                    # ungroup
+
+#add team variable back into individual data
+indData <- data %>%
+  select(name, position, team) %>%
+  left_join(indData, by = c("name", "team"))
+
+#condense team data into yearly stats
+teamData <- data %>%
+  filter(!is.na(team)) %>%                          # remove entries w/ NA team 
+  select(-name, -position, -game_week, -rate) %>%   # remove irrelavant vars
+  group_by(team, game_year) %>%                     # group by team and year
+  summarise_all(funs(sum), na.rm = TRUE) %>%        # sum all statistics and remove NAs
+  ungroup()                                         # ungroup
+```
+
+```{r, include = FALSE}
+indData <- indData %>%                               # modify current data
+  group_by(position, game_year) %>%                  # group by player and year
+  mutate_at(vars(-name, -position, 
+                 -game_year, -team),                 # unselect character vars
+                                                     # and year var
+            funs(z = ((. - mean(.)) / sd(.)))) %>%   # create z-score for all 
+                                                     # variables
+
+  ungroup() %>%                                      # ungroup
+  select(name, position, game_year, contains("z"))   # restrict vars to zscores
+
+
+rb <- indData %>%                                    # create dataset for RBs
+  select(name, game_year, position, contains("rush")) %>% # select rushing vars
+  filter(position == "RB") %>%                       # filter to RB position
+  select(-position) %>%                              # remove position var
+  mutate(rush_fumbles_z = rush_fumbles_z * -1) %>%   # reverse score fumbles
+  ungroup() %>%                                      # clear any existing grouping
+  group_by(name, game_year) %>%                      # group by player name
+  mutate(totalZ = rush_att_z + rush_yds_z + rush_avg_z + rush_tds_z + 
+              ifelse(is.na(rush_fumbles_z), 0, rush_fumbles_z)) %>%   # create total z score index
+  select(name, game_year, totalZ) %>%                # select name, year, and totalZ
+  distinct() %>%                                     # remove duplicate entries
+  arrange(desc(totalZ))                              # arrange with greatest valuea at top
+
+qb <- indData %>%                                    # create dataset for QBs
+  select(name, position, game_year, contains("pass"), contains("int"), 
+         contains("sck"), contains("rate")) %>%      # select passing vars
+  filter(position == "QB") %>%                       # filter down to QB position
+  select(-position) %>%                              # remove position var
+  mutate(int_z_sumZ = int_z * -1,
+         sck_z_sumZ = sck_z * -1,
+         pass_fumbles_z = pass_fumbles_z * -1) %>%   # reverse score ints, scks, and fumbles
+  ungroup() %>%                                      # clear any existing grouping
+  group_by(name, game_year) %>%                      # group by player name
+  mutate(totalZ = pass_att_z + pass_yds_z + pass_tds_z + int_z + sck_z + 
+              ifelse(is.na(pass_fumbles_z), 0, pass_fumbles_z) + rate_z) %>%  # create total z score index
+  select(name, game_year, totalZ) %>%                # select name, year and totalZ
+  distinct() %>%                                     # remove duplicate entries
+  arrange(desc(totalZ))                              # arrange with greatest valuea at top
+
+wr_te <- indData %>%                                 # create dataset for WRs and TEs
+  select(name, position, game_year, contains("rec")) %>% # select receiving vars
+  filter(position == "WR/TE") %>%                    # filter down to wr/te
+  select(-position) %>%                              # remove position var
+  ungroup() %>%                                      # remove any existing groupings
+  group_by(name, game_year) %>%                      # group by player name
+  mutate(rec_fumbles_z = rec_fumbles_z * -1) %>%     # reverse score fumbles
+  mutate(totalZ = rec_z + rec_yds_z + rec_avg_z + rec_tds_z + 
+              ifelse(is.na(rec_fumbles_z), 0, rec_fumbles_z)) %>% # create total z score index
+  select(name, game_year, totalZ) %>%                # select name, year, and totalZ
+  distinct() %>%                                     # remove duplicate entries
+  arrange(desc(totalZ))                              # arrange with greatest valuea at top
+
+rbCareer <- rb %>%                                   # specify rb dataset
+  ungroup() %>%                                      # remove previous groupings
+  group_by(name) %>%                                 # group by name
+  summarise(careerZ = sum(totalZ, na.rm = TRUE)) %>% # sum all zscores by person
+  arrange(desc(careerZ))                             # arrange in a descending order
+  
+qbCareer <- qb %>%                                   # specify qb data
+  ungroup() %>%                                      # remove previous groupings
+  group_by(name) %>%                                 # group by name
+  summarise(careerZ = sum(totalZ, na.rm = TRUE)) %>% # sum all zscores by person
+  arrange(desc(careerZ))                             # arrange in a descending order
+
+wr_teCareer <- wr_te %>%                             # specify wr_te data
+  ungroup() %>%                                      # remove previous groupings
+  group_by(name) %>%                                 # group by name
+  summarise(careerZ = sum(totalZ, na.rm = TRUE)) %>% # sum all zscores by person
+  arrange(desc(careerZ))                             # arrange in a descending order
+
+rb                                                   # print rb
+
+rbCareer                                             # print rb career data
+
+qb                                                   # print qb
+
+qbCareer                                             # print qb career data
+
+wr_te                                                # print wr_te
+
+wr_teCareer                                          # print wr_te career data
+```
+
+```{r include = FALSE}
+teamData <- teamData %>%                             # modify current data
+  group_by(game_year) %>%                            # group by player and year
+  mutate_at(vars(-team, -game_year),                 # unselect character vars
+                                                     # and year var
+            funs(z = ((. - mean(., na.rm = TRUE)) / sd(., na.rm = TRUE)))) %>%   # create z-score for all 
+                                                     # variables 
+
+  ungroup() %>%                                      # ungroup
+  select(team, game_year, contains("z")) %>%         # restrict vars to zscores
+  group_by(team, game_year) %>%                      # group by name and position
+  summarise_at(vars(-team, -game_year), funs(sumZ = sum(., na.rm = TRUE))) %>%    #sum zscores across years
+  mutate(rush_fumbles_z_sumZ = rush_fumbles_z_sumZ * -1,
+         rec_fumbles_z_sumZ = rec_fumbles_z_sumZ * -1,
+         int_z_sumZ = int_z_sumZ * -1,
+         sck_z_sumZ = sck_z_sumZ * -1,
+         pass_fumbles_z_sumZ = pass_fumbles_z_sumZ * -1) %>% # reverse score fumbles, sacks, and ints
+  mutate(totalZ = rush_att_z_sumZ + rush_yds_z_sumZ + rush_avg_z_sumZ + 
+              rush_tds_z_sumZ + 
+              ifelse(is.na(rush_fumbles_z_sumZ), 0, rush_fumbles_z_sumZ) + 
+              rec_z_sumZ + 
+              rec_yds_z_sumZ + rec_avg_z_sumZ + rec_tds_z_sumZ +
+              rec_fumbles_z_sumZ + pass_att_z_sumZ + pass_yds_z_sumZ + 
+              pass_tds_z_sumZ + int_z_sumZ + sck_z_sumZ + 
+              pass_fumbles_z_sumZ) %>%               # create total z score index
+  select(team, game_year, totalZ) %>%
+  arrange(desc(totalZ))                              # sort in descending order
+
+teamDataWindow <- teamData %>%                       # store teamData in teamDataWindow
+  group_by(team) %>%                                 # group by team
+  summarise(windowZ = sum(totalZ)) %>%               # sum z scores across team
+  arrange(desc(windowZ))                             # arrange in descending order
+
+teamData                                             # print teamData
+
+teamDataWindow                                       # print teamDataWindow
+```
+
+# GitHub README
+This project is a reproducible R project that is analyzing data collected from 
+the National Football League (NFL) between the 2000 and 2017 seasons. Traditionally, most statistics in sports are compared based on the raw totals (e.g., comparing the number of career passing yards between players). The unfortunate downfall of such an approach is that the trends in the league 
+differ, and as a result, players’ raw statistical totals may reflect those 
+trends. For example, players who played in the early decades of the NFL were playing in a rushing dominant context, whereas players now are playing in a 
+passing dominant context.
+
+This statistical analysis will attempt to serve as a basis for comparing 
+players’ statistical totals regardless of when each player played. This will be done by calculating z-scores based on the yearly statistics for all statistical categories. Subsequently, yearly totals can be calculated by summing all of the variables for each year. Then, yearly totals can be compared across years, and yearly totals can be summed to calculate career totals based off of those 
+z-scores.
 
 # Data Analysis Questions
-In comparing sports statistics over long periods of time, it is often difficult to make direct comparisons given contextual changes in styles of gameplay over time. This data analysis seeks to use z-scores to allow for comparison across years. This data analysis will utilize z-score comparisons to demonstrate which players have had the most prolific seasons and careers. Similarly, team data will be analyzed to see which teams have had the most prolific seasons.  
+In comparing sports statistics over long periods of time, it is often difficult 
+to make direct comparisons given contextual changes in styles of gameplay over time. This data analysis seeks to use z-scores to allow for comparison across years. This data analysis will utilize z-score comparisons to demonstrate which players have had the most prolific seasons and careers. Similarly, team data 
+will be analyzed to see which teams have had the most prolific seasons.  
 
 # Data Analysis Findings
+Because of the significant differences between positions, the season and career results are delineated by position. The three positions examined are 
+quarterback, running back, and receiving positions (wide receivers and tight 
+ends). The team season statistics are an amalgamation of the performances from these three positions.
+
+## Running backs
+
+```{r}
+# graph individuals' season data
+rb %>%
+  ggplot(aes(x = game_year, y = totalZ)) +                                   # set vars for axis
+  geom_jitter(alpha = 5/9, color = "green") +                                # set alpha and color
+  theme(panel.background = element_rect(fill = 'black', colour = 'black'),   # set background to black
+        panel.grid.major = element_blank(),                                  # remove major grid lines
+        panel.grid.minor = element_blank()) +                                # remove minor grid lines
+  ggtitle("RB Performance by Season") +                                      # set graph title
+  labs(x = "Year", y = "Total Z Score")                                      # set axes labels
+```
+
+### Running back season performances
+
+```{r}
+kable(head(rb, 30), booktabs = TRUE, format = 'markdown', align = 'c',
+        caption = "A table of the top 30 running back performances by season.")
+```
+
+### Running back career performances
+
+```{r}
+kable(head(rbCareer, 30), booktabs = TRUE, format = 'markdown', align = 'c',
+        caption = "A table of the top 30 running backs by career.")
+```
+
+According to this analysis, Shaun Alexander's performance from 2005 is the best running back single season performance within the analysis window. As can be 
+seen from the graph as well as the table of season performances, there are many single season performances that are ranked closely behind. In regards to the 
+most prolific running back career within the analysis window, LeDainian 
+Tomlinson is clearly above his peers in terms of career performance. That being said, LeSean McCoy and Frank Gore also appear to be outliers in terms of career performance in relation to their peers.
+
+## Quarterbacks
+
+```{r}
+qb %>%
+  ggplot(aes(x = game_year, y = totalZ)) +                                   # set vars for axis
+  geom_jitter(alpha = 5/9, color = "green") +                                # set alpha and color
+  theme(panel.background = element_rect(fill = 'black', colour = 'black'),   # set background to black
+        panel.grid.major = element_blank(),                                  # remove major grid lines
+        panel.grid.minor = element_blank()) +                                # remove minor grid lines
+  ggtitle("QB Performance by Season") +                                      # set graph title
+  labs(x = "Year", y = "Total Z Score")                                      # set axes labels
+```
+
+### Quarterback season performances
+```{r}
+kable(head(qb, 30), booktabs = TRUE, format = 'markdown', align = 'c',
+        caption = 'A table of the top 30 quarter back performances by season.')
+```
+
+### Quarterback career performances
+```
+kable(head(qbCareer, 30), booktabs = TRUE, format = 'markdown', align = 'c',
+        caption = 'A table of the top 30 quarter backs by career.')
+```
+
+According to this analysis, Drew Bledsoe's performance from 2002 is the best quarterback single season performance within the analysis window. Similar to the situation with the running backs, there are numerous other quarterbacks with similar single season performances. In regards to the most prolific quarterback career within the analysis window, Peyton Manning has the highest career rating amongst the quarterbacks. Once again, there appear to be several other 
+quarterbacks who are outliers amongst their peers. These other outliers include notable quarterbacks such as Drew Brees, Brett Favre, Tom Brady, and Ben Roethlisberger.
+
+## Receiving
+
+```{r}
+wr_te %>%
+  ggplot(aes(x = game_year, y = totalZ)) +                                   # set vars for axis
+  geom_jitter(alpha = 5/9, color = "green") +                                # set alpha and color
+  theme(panel.background = element_rect(fill = 'black', colour = 'black'),   # set background to black
+        panel.grid.major = element_blank(),                                  # remove major grid lines
+        panel.grid.minor = element_blank()) +                                # remove minor grid lines
+  ggtitle("WR/TE Performance by Season") +                                   # set graph title
+  labs(x = "Year", y = "Total Z Score")                                      # set axes labels
+```
+
+### Receiving season performances
+
+```{r}
+kable(head(wr_te, 30), booktabs = TRUE, format = 'markdown', align = 'c',
+        caption = 'A table of the top 30 receiving performances by season.')
+```
+
+### Receiving career performances
+
+```{r}
+kable(head(wr_teCareer, 30), booktabs = TRUE, format = 'markdown', align = 'c',
+        caption = 'A table of the top 30 receviers and tight ends by career.')
+```
+
+According to this analysis, Randy Moss' performance from 2007 is the best 
+receiving single season performance within the analysis window. In regards to 
+the most prolific receiving career within the analysis window, Terrell Owens narrowly claimed the top honor ahead of Tony Gonzalez. Unlike the running back 
+and quarterback categories, there does not appear to be the same clear differentiation between several the elite players and the very  good players.
+
+## Team
+
+```{r}
+# graph team data
+teamData %>%
+  ggplot(aes(x = game_year, y = totalZ, color = team)) +                     # set vars for axis
+  geom_jitter(alpha = 5/9) +                                                 # set alpha
+  theme(panel.background = element_rect(fill = 'black', colour = 'black'),   # set background to black
+        panel.grid.major = element_blank(),                                  # remove major grid lines
+        panel.grid.minor = element_blank()) +                                # remove minor grid lines
+  ggtitle("Team Performance by Season") +                                    # set graph title
+  labs(x = "Year", y = "Total Z Score")                                      # set axes labels
+```
+
+### Team offensive season performances
+
+```{r}
+kable(head(teamData, 30), booktabs = TRUE, format = 'markdown', align = 'c',
+        caption = 'A table of the top 30 offensive team performances by season.')
+```
+
+According to this analysis, the best team offensive performance was done by the 
+New Orleans Saints in 2011.  Other notable offensive team performances were achieved by the New England Patriots (2007, 2012), and Denver (2013).
+
+Of note, the interpretations of these findings, especially the findings 
+regarding individual players, must be interpreted with caution given the limited window of analysis for this data project. The window of analysis only extends 
+from 2000 through 2017. This means that players whose entire careers are not contained within this window may have been underestimated. Furthermore, the majority of players in the NFL's history have played outside of this window. 
+Thus, this is a limited view into the best statistical seasons and careers.
